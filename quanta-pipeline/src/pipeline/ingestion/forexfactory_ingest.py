@@ -36,6 +36,22 @@ ET = pytz.timezone("America/New_York")
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _truncate(val: str | None, max_len: int = 200) -> str | None:
+    """Truncate string fields to *max_len* chars to prevent DB bloat.
+
+    ponytail: fixed 200-char ceiling; promote to per-field config if any
+    source regularly sends legitimate long-form data.
+    """
+    if val is None:
+        return None
+    return val[:max_len]
+
+
+# ---------------------------------------------------------------------------
 # JSON source (primary)
 # ---------------------------------------------------------------------------
 
@@ -57,12 +73,12 @@ def _parse_json_event(raw: dict) -> dict[str, Any] | None:
     return {
         "date": event_date,
         "time_et": raw.get("time"),
-        "currency": raw.get("country", ""),
-        "impact": IMPACT_MAP.get(raw.get("impact", ""), "Low"),
-        "event": raw.get("title", ""),
-        "actual": raw.get("actual"),
-        "forecast": raw.get("forecast"),
-        "previous": raw.get("previous"),
+        "currency": _truncate(raw.get("country", "")),
+        "impact": _truncate(IMPACT_MAP.get(raw.get("impact", ""), "Low")),
+        "event": _truncate(raw.get("title", "")),
+        "actual": _truncate(raw.get("actual")),
+        "forecast": _truncate(raw.get("forecast")),
+        "previous": _truncate(raw.get("previous")),
     }
 
 
@@ -77,7 +93,7 @@ def _fetch_html() -> list[dict]:
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     })
     resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "lxml")
+    soup = BeautifulSoup(resp.text, "html.parser")
 
     rows: list[dict] = []
     for tr in soup.select("table.calendar_table tr.calendar_row"):
@@ -96,7 +112,7 @@ def _fetch_html() -> list[dict]:
 
         # Parse date — FF shows "Wed Jul 9" or similar relative
         try:
-            parsed_date = datetime.strptime(cell_date, "%a %b %d").replace(year=datetime.now().year)
+            parsed_date = datetime.strptime(f"{cell_date} {datetime.now().year}", "%a %b %d %Y")
         except ValueError:
             continue
 
@@ -111,12 +127,12 @@ def _fetch_html() -> list[dict]:
         rows.append({
             "date": parsed_date.date(),
             "time_et": cell_time,
-            "currency": cell_currency,
-            "impact": impact,
-            "event": cell_event,
-            "actual": cell_actual or None,
-            "forecast": cell_forecast or None,
-            "previous": cell_previous or None,
+            "currency": _truncate(cell_currency),
+            "impact": _truncate(impact),
+            "event": _truncate(cell_event),
+            "actual": _truncate(cell_actual or None),
+            "forecast": _truncate(cell_forecast or None),
+            "previous": _truncate(cell_previous or None),
         })
 
     return rows

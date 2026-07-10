@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
+import requests
 
 from src.pipeline.config import Config
 from src.pipeline.ingestion.forexfactory_ingest import (
@@ -73,9 +74,9 @@ def test_fetch_json_success():
 
 def test_fetch_json_retries_on_failure():
     with patch("src.pipeline.ingestion.forexfactory_ingest.requests.get") as mock_get:
-        mock_get.side_effect = ConnectionError("no network")
+        mock_get.side_effect = requests.exceptions.ConnectionError("no network")
 
-        with pytest.raises(ConnectionError):
+        with pytest.raises(requests.exceptions.ConnectionError):
             _fetch_json()
         assert mock_get.call_count == 3
 

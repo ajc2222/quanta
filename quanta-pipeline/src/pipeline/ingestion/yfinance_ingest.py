@@ -104,9 +104,9 @@ def _fetch_chain(underlying: str) -> tuple[pd.DataFrame, float]:
                     "strike": float(opt["strike"]),
                     "expiry": expiry_date,
                     "option_type": opt_type,
-                    "open_interest": int(opt.get("openInterest", 0) or 0),
+                    "open_interest": min(int(opt.get("openInterest", 0) or 0), 10_000_000),
                     "volume": int(opt.get("volume", 0) or 0),
-                    "implied_volatility": float(opt.get("impliedVolatility", np.nan) or np.nan),
+                    "implied_volatility": min(float(opt.get("impliedVolatility", np.nan) or np.nan), 10.0),
                     "last_price": float(opt.get("lastPrice", np.nan) or np.nan),
                 })
 
@@ -256,13 +256,29 @@ def run_snapshot(cfg: Config, underlying: str) -> dict[str, Any] | None:
 
     now = pd.Timestamp.now(tz=ET)
 
-    # 1. Store raw chain
+    # 1. Store raw chain (pivot to call/put per-strike format)
     raw_rows = chain.to_dict("records")
+    strike_map: dict[float, dict] = {}
     for r in raw_rows:
-        r["snapshot_timestamp"] = now
-        r["underlying"] = underlying
-        r["spot_price"] = round(spot, 2)
-    insert_options_snapshot(raw_rows)
+        sk = r["strike"]
+        if sk not in strike_map:
+            strike_map[sk] = {
+                "snapshot_timestamp": now,
+                "underlying": underlying,
+                "strike": sk,
+                "expiry": r["expiry"],
+                "call_oi": 0, "put_oi": 0,
+                "call_volume": 0, "put_volume": 0,
+                "call_iv": None, "put_iv": None,
+                "call_delta": None, "put_delta": None,
+                "call_gamma": None, "put_gamma": None,
+                "spot_price": round(spot, 2),
+            }
+        prefix = "call" if r["option_type"] == "call" else "put"
+        strike_map[sk][f"{prefix}_oi"] = int(r.get("open_interest", 0) or 0)
+        strike_map[sk][f"{prefix}_volume"] = int(r.get("volume", 0) or 0)
+        strike_map[sk][f"{prefix}_iv"] = float(r.get("implied_volatility", 0) or 0)
+    insert_options_snapshot(list(strike_map.values()))
 
     # 2. Compute + store GEX
     per_strike, summary = _compute_gex_snapshot(chain, spot, underlying.replace("^", ""), now)

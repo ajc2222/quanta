@@ -6,6 +6,7 @@ import requests
 from tenacity import (
     before_sleep_log,
     retry,
+    retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
@@ -33,7 +34,7 @@ def http_retry(label: str = ""):
     return retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=2, min=4, max=60),
-        retry=retry_if_exception_type(TRANSIENT) | retry_if_exception_type(is_transient_http),
+        retry=retry_if_exception_type(TRANSIENT) | retry_if_exception(is_transient_http),
         before_sleep=before_sleep_log(log, logging.WARNING),
         reraise=True,
     )

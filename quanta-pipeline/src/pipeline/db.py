@@ -40,9 +40,9 @@ def upsert_ohlcv_1m(rows: list[dict[str, Any]]) -> int:
     if not rows:
         return 0
     sql = """
-        INSERT INTO ohlcv_1m (instrument, timestamp, open, high, low, close, volume)
+        INSERT INTO ohlcv_1m (instrument, ts, open, high, low, close, volume)
         VALUES %s
-        ON CONFLICT (instrument, timestamp) DO UPDATE
+        ON CONFLICT (instrument, ts) DO UPDATE
         SET open = EXCLUDED.open,
             high = GREATEST(ohlcv_1m.high, EXCLUDED.high),
             low  = LEAST(ohlcv_1m.low, EXCLUDED.low),
@@ -52,7 +52,7 @@ def upsert_ohlcv_1m(rows: list[dict[str, Any]]) -> int:
     with get_conn() as conn, conn.cursor() as cur:
         psycopg2.extras.execute_values(
             cur, sql, rows,
-            template="(%(instrument)s, %(timestamp)s, %(open)s, %(high)s, %(low)s, %(close)s, %(volume)s)",
+            template="(%(instrument)s, %(ts)s, %(open)s, %(high)s, %(low)s, %(close)s, %(volume)s)",
         )
         return cur.rowcount
 
@@ -62,9 +62,9 @@ def upsert_news_events(rows: list[dict[str, Any]]) -> int:
     if not rows:
         return 0
     sql = """
-        INSERT INTO news_events (date, time_et, currency, impact, event, actual, forecast, previous)
+        INSERT INTO news_events (event_date, event_time, currency, impact, event_name, actual, forecast, previous)
         VALUES %s
-        ON CONFLICT (date, time_et, event, currency) DO NOTHING
+        ON CONFLICT (event_date, event_time, event_name, currency) DO NOTHING
     """
     with get_conn() as conn, conn.cursor() as cur:
         psycopg2.extras.execute_values(cur, sql, rows)
@@ -72,14 +72,15 @@ def upsert_news_events(rows: list[dict[str, Any]]) -> int:
 
 
 def insert_options_snapshot(rows: list[dict[str, Any]]) -> int:
-    """Insert raw options chain snapshot rows."""
+    """Insert options chain snapshot rows (call/put per-strike split)."""
     if not rows:
         return 0
     sql = """
         INSERT INTO options_chain_snapshots
-            (snapshot_timestamp, underlying, strike, expiry, option_type,
-             open_interest, volume, implied_volatility, delta, gamma,
-             last_price, spot_price, dte)
+            (snapshot_timestamp, underlying, strike, expiry,
+             call_oi, put_oi, call_gamma, put_gamma,
+             call_delta, put_delta, call_iv, put_iv,
+             call_volume, put_volume, spot_price)
         VALUES %s
     """
     with get_conn() as conn, conn.cursor() as cur:
@@ -92,7 +93,7 @@ def insert_gex_levels(rows: list[dict[str, Any]]) -> int:
     if not rows:
         return 0
     sql = """
-        INSERT INTO gex_levels_daily
+        INSERT INTO gex_strike_levels
             (snapshot_timestamp, date, underlying, strike, call_gex, put_gex, net_gex)
         VALUES %s
     """
@@ -104,12 +105,12 @@ def insert_gex_levels(rows: list[dict[str, Any]]) -> int:
 def upsert_gex_summary(row: dict[str, Any]) -> None:
     """Insert or update the GEX summary for this snapshot."""
     sql = """
-        INSERT INTO gex_summary
+        INSERT INTO gex_levels_daily
             (snapshot_timestamp, date, underlying, total_call_gex, total_put_gex,
              net_gex, call_wall_strike, put_wall_strike, gex_flip_strike,
              zero_gamma_strike, max_pain_strike, spot_price)
         VALUES %s
-        ON CONFLICT (snapshot_timestamp, underlying) DO UPDATE
+        ON CONFLICT (date, underlying, snapshot_timestamp) DO UPDATE
         SET total_call_gex = EXCLUDED.total_call_gex,
             total_put_gex  = EXCLUDED.total_put_gex,
             net_gex        = EXCLUDED.net_gex,
@@ -132,6 +133,6 @@ def upsert_gex_summary(row: dict[str, Any]) -> None:
 def get_latest_bar_timestamp(instrument: str) -> _datetime | None:
     """Return the latest bar timestamp for *instrument* in ohlcv_1m, or None."""
     with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("SELECT MAX(timestamp) FROM ohlcv_1m WHERE instrument = %s", (instrument,))
+        cur.execute("SELECT MAX(ts) FROM ohlcv_1m WHERE instrument = %s", (instrument,))
         row = cur.fetchone()
         return row[0] if row and row[0] else None

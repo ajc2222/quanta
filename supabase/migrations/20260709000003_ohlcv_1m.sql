@@ -35,7 +35,7 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS ohlcv_1m_%s PARTITION OF ohlcv_1m FOR VALUES IN (%L)',
+        'CREATE TABLE IF NOT EXISTS ohlcv_1m_%I PARTITION OF ohlcv_1m FOR VALUES IN (%L)',
         lower(p_instrument), p_instrument
     );
 END;
