@@ -1,3 +1,4 @@
+'use client'
 import {
   BarChart,
   Bar,
@@ -83,7 +84,7 @@ export default function OIByStrike() {
               strokeWidth={1.5}
               label={{
                 value: '● 5,800',
-                position: 'start',
+                position: 'insideTopLeft' as const,
                 fill: '#FFFFFF',
                 fontSize: 11,
                 fontFamily: "'JetBrains Mono', monospace",

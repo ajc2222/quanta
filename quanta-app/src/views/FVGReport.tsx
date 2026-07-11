@@ -1,3 +1,4 @@
+'use client'
 import { useState } from 'react';
 import FilterBar from '../components/layout/FilterBar';
 import StatCard from '../components/reports/StatCard';

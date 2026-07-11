@@ -55,8 +55,22 @@ async function warmCache(type: string): Promise<void> {
   const modPath = moduleMap[type];
   if (!modPath) return;
 
-  const mod = await import(`../lib/reports/${modPath}`);
-  const queryFn = mod[`query${type.charAt(0).toUpperCase() + type.slice(1)}Stats`];
+  // static map required — bundler can't analyze template-literal dynamic imports
+  const mods: Record<string, () => Promise<Record<string, unknown>>> = {
+    fvg:      () => import('@/lib/reports/fvg'),
+    ob:       () => import('@/lib/reports/ob'),
+    liquidity: () => import('@/lib/reports/liquidity'),
+    po3:      () => import('@/lib/reports/po3'),
+    keyopens: () => import('@/lib/reports/keyopens'),
+    gaps:     () => import('@/lib/reports/gaps'),
+    news:     () => import('@/lib/reports/news'),
+    macros:   () => import('@/lib/reports/macros'),
+  };
+  const modLoader = mods[modPath];
+  if (!modLoader) return;
+  const mod = await modLoader();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const queryFn = mod[`query${type.charAt(0).toUpperCase() + type.slice(1)}Stats`] as ((...args: any[]) => any) | undefined;
   if (!queryFn) return;
 
   const { getOrCompute } = await import('@/lib/cache/get-or-compute');
@@ -64,7 +78,8 @@ async function warmCache(type: string): Promise<void> {
 
   await Promise.allSettled(
     popularCombos.map(combo =>
-      getOrCompute(buildCacheKey(type, combo), () => queryFn(combo), { ttl: 7200 }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      getOrCompute(buildCacheKey(type, combo as any), () => queryFn(combo), { ttl: 7200 }),
     ),
   );
 }
