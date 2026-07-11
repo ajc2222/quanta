@@ -5,7 +5,7 @@ from datetime import date
 from typing import Optional
 from supabase import Client
 
-from src.aggregation.aggregator import (
+from aggregation.aggregator import (
     build_report,
     FVG_METRICS, OB_METRICS, PO3_METRICS,
     LIQUIDITY_METRICS, KEYOPEN_METRICS, NEWS_CANDLE_METRICS,

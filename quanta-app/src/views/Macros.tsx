@@ -1,3 +1,4 @@
+'use client'
 import { useState } from 'react'
 import BarChart from '../components/charts/BarChart'
 import StatCard from '../components/reports/StatCard'

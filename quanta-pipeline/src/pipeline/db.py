@@ -67,7 +67,10 @@ def upsert_news_events(rows: list[dict[str, Any]]) -> int:
         ON CONFLICT (event_date, event_time, event_name, currency) DO NOTHING
     """
     with get_conn() as conn, conn.cursor() as cur:
-        psycopg2.extras.execute_values(cur, sql, rows)
+        psycopg2.extras.execute_values(
+            cur, sql, rows,
+            template="(%(event_date)s, %(event_time)s, %(currency)s, %(impact)s, %(event_name)s, %(actual)s, %(forecast)s, %(previous)s)",
+        )
         return cur.rowcount
 
 
@@ -84,7 +87,10 @@ def insert_options_snapshot(rows: list[dict[str, Any]]) -> int:
         VALUES %s
     """
     with get_conn() as conn, conn.cursor() as cur:
-        psycopg2.extras.execute_values(cur, sql, rows)
+        psycopg2.extras.execute_values(
+            cur, sql, rows,
+            template="(%(snapshot_timestamp)s, %(underlying)s, %(strike)s, %(expiry)s, %(call_oi)s, %(put_oi)s, %(call_gamma)s, %(put_gamma)s, %(call_delta)s, %(put_delta)s, %(call_iv)s, %(put_iv)s, %(call_volume)s, %(put_volume)s, %(spot_price)s)",
+        )
         return cur.rowcount
 
 
@@ -98,7 +104,10 @@ def insert_gex_levels(rows: list[dict[str, Any]]) -> int:
         VALUES %s
     """
     with get_conn() as conn, conn.cursor() as cur:
-        psycopg2.extras.execute_values(cur, sql, rows)
+        psycopg2.extras.execute_values(
+            cur, sql, rows,
+            template="(%(snapshot_timestamp)s, %(date)s, %(underlying)s, %(strike)s, %(call_gex)s, %(put_gex)s, %(net_gex)s)",
+        )
         return cur.rowcount
 
 

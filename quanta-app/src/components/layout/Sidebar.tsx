@@ -1,4 +1,6 @@
-import { NavLink } from 'react-router-dom'
+'use client'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { NAV_SECTIONS } from '../../constants'
 import type { NavItem } from '../../types'
 
@@ -83,7 +85,9 @@ function NavItemComponent({
   item: NavItem
   onSoonClick?: () => void
 }) {
+  const pathname = usePathname()
   const isSoon = item.badge === 'soon'
+  const isActive = pathname === item.path
 
   if (isSoon) {
     return (
@@ -97,17 +101,15 @@ function NavItemComponent({
   }
 
   return (
-    <NavLink
-      to={item.path}
-      className={({ isActive }) =>
-        `flex items-center px-5 py-2.5 text-sm font-medium transition-colors duration-100 ${
-          isActive
-            ? 'border-l-[3px] border-accent text-accent bg-bg-surface'
-            : 'text-text-primary hover:bg-bg-surface border-l-[3px] border-transparent'
-        }`
-      }
+    <Link
+      href={item.path}
+      className={`flex items-center px-5 py-2.5 text-sm font-medium transition-colors duration-100 ${
+        isActive
+          ? 'border-l-[3px] border-accent text-accent bg-bg-surface'
+          : 'text-text-primary hover:bg-bg-surface border-l-[3px] border-transparent'
+      }`}
     >
       {item.label}
-    </NavLink>
+    </Link>
   )
 }

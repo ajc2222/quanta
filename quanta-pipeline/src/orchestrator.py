@@ -18,11 +18,10 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from src.config import Config
-from src.db import get_db, insert_many, delete_old_instances, fetch_ohlcv
-from src import detection
-from src.aggregation.aggregator import build_all_reports
-from src.aggregation.queries import LOOKBACKS, INSTRUMENTS
+from config import Config
+from db import get_db, insert_many, delete_old_instances, fetch_ohlcv
+import detection
+from aggregation.queries import build_all_reports, LOOKBACKS, INSTRUMENTS
 
 log = logging.getLogger(__name__)
 

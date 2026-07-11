@@ -71,11 +71,11 @@ def _parse_json_event(raw: dict) -> dict[str, Any] | None:
         return None
 
     return {
-        "date": event_date,
-        "time_et": raw.get("time"),
+        "event_date": event_date,
+        "event_time": raw.get("time"),
         "currency": _truncate(raw.get("country", "")),
         "impact": _truncate(IMPACT_MAP.get(raw.get("impact", ""), "Low")),
-        "event": _truncate(raw.get("title", "")),
+        "event_name": _truncate(raw.get("title", "")),
         "actual": _truncate(raw.get("actual")),
         "forecast": _truncate(raw.get("forecast")),
         "previous": _truncate(raw.get("previous")),
@@ -125,11 +125,11 @@ def _fetch_html() -> list[dict]:
             impact = "Low"
 
         rows.append({
-            "date": parsed_date.date(),
-            "time_et": cell_time,
+            "event_date": parsed_date.date(),
+            "event_time": cell_time,
             "currency": _truncate(cell_currency),
             "impact": _truncate(impact),
-            "event": _truncate(cell_event),
+            "event_name": _truncate(cell_event),
             "actual": _truncate(cell_actual or None),
             "forecast": _truncate(cell_forecast or None),
             "previous": _truncate(cell_previous or None),

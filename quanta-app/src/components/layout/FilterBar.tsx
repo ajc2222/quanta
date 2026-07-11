@@ -1,4 +1,5 @@
-import { useSearchParams } from 'react-router-dom'
+'use client'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 import {
   INSTRUMENTS,
@@ -9,16 +10,17 @@ import {
 import type { ReportFilterState } from '../../types'
 
 interface FilterBarProps {
-  /** Optional extra filter label rendered after standard filters */
   reportFilter?: string
-  /** Called whenever any filter changes */
   onChange?: (state: ReportFilterState) => void
 }
 
 const LOOKBACK_VALUES = LOOKBACK_OPTIONS.map((o) => o.value)
 
 export default function FilterBar({ reportFilter, onChange }: FilterBarProps) {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const rawSearchParams = useSearchParams()
+  const searchParams = rawSearchParams ?? new URLSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
 
   /* ── Derive current state from URL ──────────────────────────── */
 
@@ -42,47 +44,45 @@ export default function FilterBar({ reportFilter, onChange }: FilterBarProps) {
 
   const update = useCallback(
     (patch: Partial<ReportFilterState>) => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev)
-          if ('instruments' in patch) {
-            if (
-              !patch.instruments ||
-              patch.instruments.length === 0 ||
-              patch.instruments.join(',') === DEFAULT_FILTERS.instruments.join(',')
-            ) {
-              next.delete('instruments')
-            } else {
-              next.set('instruments', patch.instruments.join(','))
-            }
-          }
-          if ('lookback' in patch) {
-            if (patch.lookback === DEFAULT_FILTERS.lookback) {
-              next.delete('lookback')
-            } else {
-              next.set('lookback', patch.lookback!)
-            }
-          }
-          if ('session' in patch) {
-            if (patch.session === DEFAULT_FILTERS.session) {
-              next.delete('session')
-            } else {
-              next.set('session', patch.session!)
-            }
-          }
-          return next
-        },
-        { replace: true },
-      )
-      // notify parent
-      const merged: ReportFilterState = {
+      const next = new URLSearchParams(searchParams.toString())
+
+      if ('instruments' in patch) {
+        if (
+          !patch.instruments ||
+          patch.instruments.length === 0 ||
+          patch.instruments.join(',') === DEFAULT_FILTERS.instruments.join(',')
+        ) {
+          next.delete('instruments')
+        } else {
+          next.set('instruments', patch.instruments.join(','))
+        }
+      }
+      if ('lookback' in patch) {
+        if (patch.lookback === DEFAULT_FILTERS.lookback) {
+          next.delete('lookback')
+        } else {
+          next.set('lookback', patch.lookback!)
+        }
+      }
+      if ('session' in patch) {
+        if (patch.session === DEFAULT_FILTERS.session) {
+          next.delete('session')
+        } else {
+          next.set('session', patch.session!)
+        }
+      }
+
+      const qs = next.toString()
+      const base = pathname ?? '/'
+      router.replace(qs ? `${base}?${qs}` : base, { scroll: false })
+
+      onChange?.({
         instruments: patch.instruments ?? instruments,
         lookback: patch.lookback ?? lookback,
         session: patch.session ?? session,
-      }
-      onChange?.(merged)
+      })
     },
-    [instruments, lookback, session, onChange, setSearchParams],
+    [instruments, lookback, session, onChange, router, pathname, searchParams],
   )
 
   const toggleInstrument = useCallback(
@@ -163,7 +163,6 @@ export default function FilterBar({ reportFilter, onChange }: FilterBarProps) {
         ))}
       </select>
 
-      {/* Optional report-specific filter placeholder */}
       {reportFilter && (
         <span className="text-muted text-xs ml-auto">{reportFilter}</span>
       )}

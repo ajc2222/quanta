@@ -66,7 +66,7 @@ def fetch_ohlcv_1m(
     df = data.to_df()
     # Rename Databento columns to our canonical names
     df = df.rename(columns={
-        "ts_event": "timestamp",
+        "ts_event": "ts",
         "open": "open",
         "high": "high",
         "low": "low",
@@ -74,7 +74,7 @@ def fetch_ohlcv_1m(
         "volume": "volume",
     })
     df["instrument"] = instrument
-    return df[["instrument", "timestamp", "open", "high", "low", "close", "volume"]]
+    return df[["instrument", "ts", "open", "high", "low", "close", "volume"]]
 
 
 # ---------------------------------------------------------------------------

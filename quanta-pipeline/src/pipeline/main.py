@@ -42,6 +42,15 @@ def _nightly_job(cfg: Config, status_store: dict) -> None:
 
     forexfactory_ingest.run(cfg)
 
+    # Stage 2+3: detection → aggregation → cache invalidation
+    try:
+        from orchestrator import run_nightly_pipeline
+        from config import Config as OrchestratorConfig
+        run_nightly_pipeline(OrchestratorConfig.load())
+        log.info("Detection/aggregation complete")
+    except Exception:
+        log.exception("Detection/aggregation failed — ingestion data still saved")
+
     status_store["last_nightly"] = time.time()
     log.info("=== NIGHTLY JOB DONE ===")
 
